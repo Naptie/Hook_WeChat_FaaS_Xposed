@@ -53,9 +53,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    compileOnly("de.robv.android.xposed:api:82")
-    implementation("io.ktor:ktor-server-core:1.6.1")
-    implementation("io.ktor:ktor-server-netty:1.6.1")
-    implementation("io.ktor:ktor-gson:1.6.1")
-
+    compileOnly(libs.api)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.gson)
 }
