@@ -28,10 +28,12 @@ import io.ktor.websocket.WebSockets
 import io.ktor.websocket.webSocket
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 
 data class InvokeRequest(
@@ -51,7 +53,7 @@ data class LogBroadcast(
 
 // Per-app state containing the JNI instance and request counter
 data class HookedAppState(
-    @Volatile var appBrandCommonBindingJniInstance: Any? = null,
+    val appBrandCommonBindingJniInstance: AtomicReference<Any?> = AtomicReference(null),
     val invokeAsyncRequestCounter: AtomicInteger = AtomicInteger(0)
 )
 
@@ -75,7 +77,7 @@ class WeChatHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     private val pendingRequests = ConcurrentHashMap<Int, CompletableDeferred<String>>()
 
     // WebSocket sessions for live broadcast
-    private val webSocketSessions = Collections.synchronizedSet(mutableSetOf<io.ktor.http.cio.websocket.WebSocketSession>())
+    private val webSocketSessions = Collections.synchronizedSet(mutableSetOf<io.ktor.http.cio.websocket.DefaultWebSocketSession>())
     private val gson = Gson()
 
     // Tracks whether hooks have been applied (to avoid duplicate hooks)
@@ -182,14 +184,15 @@ class WeChatHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                         // Try to find appId for this instance
                         var appId = instanceToAppId[instance]
                         
-                        // If not found, associate instance with the first available appId
+                        // If not found, associate instance with the first available appId using atomic operations
                         if (appId == null) {
-                            // Find an appState that doesn't have an instance yet
+                            // Use putIfAbsent for thread-safe instance-to-appId mapping
                             for ((id, state) in hookedApps) {
-                                if (state.appBrandCommonBindingJniInstance == null) {
-                                    state.appBrandCommonBindingJniInstance = instance
-                                    instanceToAppId[instance] = id
-                                    appId = id
+                                // Use compareAndSet to atomically set the instance if it's null
+                                if (state.appBrandCommonBindingJniInstance.compareAndSet(null, instance)) {
+                                    // Successfully associated this instance with appId
+                                    instanceToAppId.putIfAbsent(instance, id)
+                                    appId = instanceToAppId[instance]
                                     log("$label Associated instance with appId: $appId")
                                     break
                                 }
@@ -348,16 +351,20 @@ class WeChatHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     private fun broadcastLog(logBroadcast: LogBroadcast) {
         val json = gson.toJson(logBroadcast)
-        synchronized(webSocketSessions) {
-            webSocketSessions.forEach { session ->
-                try {
-                    // Use runBlocking since we're in a non-suspend context from Xposed hooks
-                    kotlinx.coroutines.runBlocking {
+        // Take a snapshot of sessions to avoid holding the lock during async operations
+        val sessionsCopy = synchronized(webSocketSessions) { webSocketSessions.toList() }
+        sessionsCopy.forEach { session ->
+            try {
+                // Launch non-blocking coroutine for each session
+                kotlinx.coroutines.GlobalScope.launch {
+                    try {
                         session.send(Frame.Text(json))
+                    } catch (e: Throwable) {
+                        // Session might be closed, ignore
                     }
-                } catch (e: Throwable) {
-                    // Session might be closed, ignore
                 }
+            } catch (e: Throwable) {
+                // Ignore errors launching coroutine
             }
         }
     }
@@ -378,7 +385,7 @@ class WeChatHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             throw IllegalStateException(msg)
         }
 
-        val instance = appState.appBrandCommonBindingJniInstance
+        val instance = appState.appBrandCommonBindingJniInstance.get()
         if (instance == null) {
             val msg = "AppBrandCommonBindingJniInstance is null for appId: $appId. Please open the Mini Program first."
             log("$label $msg")
