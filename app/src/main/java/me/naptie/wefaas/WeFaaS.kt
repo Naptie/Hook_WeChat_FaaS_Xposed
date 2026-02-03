@@ -223,13 +223,7 @@ class WeFaaS : IXposedHookLoadPackage, IXposedHookZygoteInit {
                         broadcastLog(LogBroadcast("response", "callback", res))
 
                         // Update per-app counter to match the system's counter if provided
-                        val appState = hookedApps[appId]
-                        if (appState != null) {
-                            val current = appState.invokeAsyncRequestCounter.get()
-                            if (id > current) {
-                                appState.invokeAsyncRequestCounter.set(id)
-                            }
-                        }
+                        hookedApps[appId]?.invokeAsyncRequestCounter?.set(id)
 
                         // Check if this is a response for our active call
                         val requestId = "$appId-$id"
