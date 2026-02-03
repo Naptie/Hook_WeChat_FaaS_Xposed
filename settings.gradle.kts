@@ -20,6 +20,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "wechat_cloud_function_hook"
+rootProject.name = "WeFaaS"
 include(":app")
  

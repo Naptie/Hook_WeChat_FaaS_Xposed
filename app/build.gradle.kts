@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.dawnnnnnn.wechat_cloud_function_hook"
+    namespace = "me.naptie.wefaas"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.dawnnnnnn.wechat_cloud_function_hook"
+        applicationId = "me.naptie.wefaas"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

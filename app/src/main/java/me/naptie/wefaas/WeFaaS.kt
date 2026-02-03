@@ -1,4 +1,4 @@
-package com.dawnnnnnn.wechat_cloud_function_hook
+package me.naptie.wefaas
 
 import com.google.gson.Gson
 import de.robv.android.xposed.IXposedHookLoadPackage
@@ -59,7 +59,7 @@ data class HookedAppState(
     val invokeAsyncRequestCounter: AtomicInteger = AtomicInteger(0)
 )
 
-class WeChatHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
+class WeFaaS : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     private var serverStarted = false
     private val label = "[WeFaaS]"

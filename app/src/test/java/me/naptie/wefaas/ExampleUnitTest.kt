@@ -1,4 +1,4 @@
-package com.dawnnnnnn.wechat_cloud_function_hook
+package me.naptie.wefaas
 
 import org.junit.Test
 

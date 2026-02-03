@@ -1,4 +1,4 @@
-package com.dawnnnnnn.wechat_cloud_function_hook
+package me.naptie.wefaas
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.dawnnnnnn.wechat_cloud_function_hook", appContext.packageName)
+        assertEquals("me.naptie.wefaas", appContext.packageName)
     }
 }
